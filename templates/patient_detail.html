@@ -1,0 +1,194 @@
+{% extends 'layout.html' %}
+{% block title %}{{ patient.full_name }} | EHR Deep Dive{% endblock %}
+{% block content %}
+<section class="space-y-8">
+    <div class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <div class="bento-tile rounded-[2rem] p-8" id="deep-dive-shell">
+            <a href="{{ url_for('web.dashboard') }}" class="inline-flex items-center gap-2 text-sm text-violet-100">← Back to Dashboard</a>
+            <p class="mt-4 text-sm uppercase tracking-[0.35em] text-teal-200/70">Deep-Dive EHR View</p>
+            <h2 class="mt-3 text-4xl font-semibold">{{ patient.full_name }}</h2>
+            <p class="mt-3 text-sm text-slate-400">{{ patient.city }} · Member {{ patient.member_id }}</p>
+            <div class="mt-6 grid gap-4 sm:grid-cols-3">
+                <div class="rounded-3xl border border-white/10 bg-white/5 p-5"><p class="text-xs uppercase tracking-[0.25em] text-slate-500">Age</p><p class="mt-2 text-3xl font-semibold text-white">{{ patient.age }}</p></div>
+                <div class="rounded-3xl border border-white/10 bg-white/5 p-5"><p class="text-xs uppercase tracking-[0.25em] text-slate-500">City</p><p class="mt-2 text-3xl font-semibold text-white">{{ patient.city }}</p></div>
+                <div class="rounded-3xl border border-white/10 bg-white/5 p-5"><p class="text-xs uppercase tracking-[0.25em] text-slate-500">Risk</p><span class="mt-3 inline-flex rounded-full border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm font-medium uppercase tracking-[0.2em] text-rose-100">{{ patient.risk.risk_label }} · {{ patient.risk.risk_score }}/5</span></div>
+            </div>
+            <div class="mt-6 rounded-3xl border border-violet-300/10 bg-violet-300/5 p-5">
+                <p class="text-xs uppercase tracking-[0.25em] text-violet-100">Explainable AI</p>
+                <p class="mt-3 text-sm leading-7 text-slate-200">{{ patient.risk.reasoning }}</p>
+                <ul class="mt-4 space-y-2 text-sm text-slate-300">
+                    {% for step in patient.risk.preventive_care_steps %}
+                    <li>• {{ step }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="bento-tile rounded-[2rem] p-8">
+            <p class="text-sm uppercase tracking-[0.35em] text-slate-400">India Specialty Map</p>
+            <h3 class="mt-3 text-2xl font-semibold">Closest care network</h3>
+            <div class="mt-5" id="patient-specialty-map" style="height: 360px;"></div>
+            <div class="mt-4 rounded-3xl border border-emerald-300/10 bg-emerald-300/5 p-4 text-sm text-slate-300">
+                {% if patient.closest_hospital %}
+                Highlighted specialty match: <span class="font-medium text-white">{{ patient.closest_hospital.name }}</span> · {{ patient.closest_hospital.distance_km }} km.
+                {% else %}
+                Patient is not currently high-risk enough to trigger specialty-hospital highlighting.
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="bento-tile rounded-[2rem] p-6">
+        <div class="flex flex-wrap gap-3" id="ehr-tabs">
+            <button data-tab="overview" class="ehr-tab rounded-2xl border border-violet-300/20 bg-violet-300/10 px-4 py-3 text-sm font-medium text-violet-100">Overview</button>
+            <button data-tab="history" class="ehr-tab rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-300">Medical History</button>
+            <button data-tab="claims" class="ehr-tab rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-300">Insurance Claims</button>
+            <button data-tab="vault" class="ehr-tab rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-300">Document Vault</button>
+        </div>
+    </div>
+
+    <div class="space-y-6">
+        <section data-panel="overview" class="ehr-panel bento-tile rounded-[2rem] p-8">
+            <div class="grid gap-6 xl:grid-cols-[1fr_1fr]">
+                <div>
+                    <p class="text-sm uppercase tracking-[0.3em] text-slate-400">Overview</p>
+                    <h3 class="mt-3 text-2xl font-semibold">Core demographics and risk summary</h3>
+                    <div class="mt-6 grid gap-4 sm:grid-cols-3">
+                        <div class="rounded-3xl border border-white/10 bg-white/5 p-5"><p class="text-xs uppercase tracking-[0.25em] text-slate-500">BMI</p><p class="mt-2 text-3xl font-semibold text-white">{{ patient.bmi }}</p></div>
+                        <div class="rounded-3xl border border-white/10 bg-white/5 p-5"><p class="text-xs uppercase tracking-[0.25em] text-slate-500">Claims</p><p class="mt-2 text-3xl font-semibold text-white">{{ patient.claims|length }}</p></div>
+                        <div class="rounded-3xl border border-white/10 bg-white/5 p-5"><p class="text-xs uppercase tracking-[0.25em] text-slate-500">Risk Badge</p><p class="mt-2 text-3xl font-semibold text-white">{{ patient.risk.risk_score }}/5</p></div>
+                    </div>
+                </div>
+                <div class="rounded-3xl border border-white/10 bg-white/5 p-6">
+                    <p class="text-sm uppercase tracking-[0.25em] text-slate-500">Preventive Care Steps</p>
+                    <div class="mt-4 space-y-3">
+                        {% for step in patient.risk.preventive_care_steps %}
+                        <div class="rounded-2xl border border-violet-300/10 bg-violet-300/5 p-4 text-sm text-slate-200">{{ loop.index }}. {{ step }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section data-panel="history" class="ehr-panel hidden bento-tile rounded-[2rem] p-8">
+            <p class="text-sm uppercase tracking-[0.3em] text-slate-400">Medical History</p>
+            <h3 class="mt-3 text-2xl font-semibold">Treatment and hospital timeline</h3>
+            <div class="mt-6 space-y-4 border-l border-violet-300/20 pl-6">
+                {% for item in patient.timeline %}
+                <div class="relative rounded-3xl border border-white/10 bg-white/5 p-5">
+                    <span class="absolute -left-[34px] top-6 h-4 w-4 rounded-full bg-violet-300 shadow-lg shadow-violet-500/30"></span>
+                    <p class="text-xs uppercase tracking-[0.25em] text-slate-500">{{ item.date }}</p>
+                    <p class="mt-2 text-lg font-medium text-white">{{ item.title }}</p>
+                    <p class="mt-2 text-sm text-slate-400">{{ item.detail }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section data-panel="claims" class="ehr-panel hidden bento-tile rounded-[2rem] p-8">
+            <p class="text-sm uppercase tracking-[0.3em] text-slate-400">Insurance Claims</p>
+            <h3 class="mt-3 text-2xl font-semibold">Provider and settlement history</h3>
+            <div class="mt-6 overflow-hidden rounded-[1.5rem] border border-white/10">
+                <table class="min-w-full divide-y divide-white/10 text-sm">
+                    <thead class="bg-white/5 text-left text-slate-400">
+                        <tr>
+                            <th class="px-5 py-4">Provider</th>
+                            <th class="px-5 py-4">Claim ID</th>
+                            <th class="px-5 py-4">Amount (INR)</th>
+                            <th class="px-5 py-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/10 bg-slate-950/20 text-slate-200">
+                        {% for claim in patient.claims %}
+                        <tr>
+                            <td class="px-5 py-4">{{ claim.provider }}</td>
+                            <td class="px-5 py-4">{{ claim.claim_id }}</td>
+                            <td class="px-5 py-4">₹ {{ '{:,.0f}'.format(claim.amount_inr) }}</td>
+                            <td class="px-5 py-4">{{ claim.status }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section data-panel="vault" class="ehr-panel hidden bento-tile rounded-[2rem] p-8">
+            <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                <div>
+                    <p class="text-sm uppercase tracking-[0.3em] text-slate-400">Document Vault</p>
+                    <h3 class="mt-3 text-2xl font-semibold">Reports linked to {{ patient.full_name }}</h3>
+                </div>
+                <form method="post" action="{{ url_for('web.upload_document', patient_id=patient.id) }}" enctype="multipart/form-data" class="grid gap-3 rounded-3xl border border-white/10 bg-white/5 p-4 sm:grid-cols-[1fr_auto]">
+                    <input class="input-shell file:mr-4 file:rounded-xl file:border-0 file:bg-violet-300/15 file:px-4 file:py-2 file:text-violet-100" type="file" name="document" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx">
+                    <button class="rounded-2xl bg-gradient-to-r from-violet-700 to-teal-400 px-4 py-3 font-medium text-slate-950" type="submit">Upload Report</button>
+                </form>
+            </div>
+            <div class="mt-6 grid gap-4">
+                {% for document in patient.documents %}
+                <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <p class="font-medium text-white">{{ document.title }}</p>
+                            <p class="mt-2 text-sm text-slate-400">{{ document.type|upper }} · {{ document.storage_key }}</p>
+                        </div>
+                        <div class="flex flex-wrap gap-3">
+                            <a href="{{ document.url }}" target="_blank" rel="noreferrer" class="rounded-2xl border border-teal-300/20 bg-teal-300/10 px-4 py-2 text-sm font-medium text-teal-100">View</a>
+                            <form method="post" action="{{ url_for('web.delete_document', patient_id=patient.id, storage_key=document.storage_key) }}">
+                                <button type="submit" class="rounded-2xl border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm font-medium text-rose-100">🗑 Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="rounded-3xl border border-dashed border-white/10 bg-white/5 p-6 text-sm text-slate-400">No documents uploaded yet.</div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</section>
+
+<script>
+window.patientDetailBoot = {
+    patient: {{ patient|tojson }},
+    hospitals: {{ hospitals|tojson }}
+};
+</script>
+<script type="module">
+import { animate } from "https://cdn.jsdelivr.net/npm/motion@11.11.13/+esm";
+
+const tabs = document.querySelectorAll('.ehr-tab');
+const panels = document.querySelectorAll('.ehr-panel');
+const shell = document.getElementById('deep-dive-shell');
+animate(shell, { opacity: [0.88, 1], transform: ['translateY(10px)', 'translateY(0px)'] }, { duration: 0.35, easing: 'ease-out' });
+
+tabs.forEach((tab) => {
+  tab.addEventListener('click', () => {
+    tabs.forEach((item) => item.className = 'ehr-tab rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-300');
+    tab.className = 'ehr-tab rounded-2xl border border-violet-300/20 bg-violet-300/10 px-4 py-3 text-sm font-medium text-violet-100';
+    panels.forEach((panel) => {
+      const active = panel.dataset.panel === tab.dataset.tab;
+      panel.classList.toggle('hidden', !active);
+      if (active) {
+        animate(panel, { opacity: [0.88, 1], transform: ['translateY(8px)', 'translateY(0px)'] }, { duration: 0.24, easing: 'ease-out' });
+      }
+    });
+  });
+});
+
+const boot = window.patientDetailBoot;
+const map = L.map('patient-specialty-map').setView([22.9734, 78.6569], 4);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+boot.hospitals.forEach((hospital) => {
+  L.marker([hospital.lat, hospital.lng]).addTo(map).bindPopup(`<strong>${hospital.name}</strong><br>${hospital.specialty}`);
+});
+const patient = boot.patient;
+const patientMarker = L.circleMarker([patient.lat, patient.lng], { radius: 10, color: '#5eead4', fillOpacity: 0.85 }).addTo(map).bindPopup(`<strong>${patient.full_name}</strong><br>${patient.risk.risk_label}`);
+if (patient.closest_hospital) {
+  const nearest = patient.closest_hospital;
+  const line = L.polyline([[patient.lat, patient.lng], [nearest.lat, nearest.lng]], { color: '#34d399', dashArray: '6 10' }).addTo(map);
+  map.fitBounds(line.getBounds(), { padding: [50, 50] });
+} else {
+  map.setView([patient.lat, patient.lng], 5);
+}
+patientMarker.openPopup();
+</script>
+{% endblock %}
