@@ -10,6 +10,7 @@ from app.services.ai_patient_analysis import build_patient_payload, derive_ai_an
 from app.services.patient_insights import build_analytics_summary, build_dashboard_stats, enrich_patients, get_high_risk_patients
 from app.services.supabase_service import HealthcareRepository
 from app.utils.geo import closest_hospital
+from ml_engine import build_ai_insights, predict_patient_risk
 from risk_engine import calculate_risk
 
 web_bp = Blueprint("web", __name__)
@@ -100,6 +101,7 @@ def dashboard():
     stats = build_dashboard_stats(enriched_patients)
     analytics = build_analytics_summary(enriched_patients)
     high_risk_patients = get_high_risk_patients(enriched_patients)
+    ai_insights = build_ai_insights(enriched_patients)
     return render_template(
         "dashboard.html",
         patients=enriched_patients,
@@ -108,6 +110,7 @@ def dashboard():
         supabase_ready=repo.is_configured,
         stats=stats,
         analytics=analytics,
+        ai_insights=ai_insights,
         current_user=session.get("user", {}),
     )
 
@@ -130,6 +133,12 @@ def add_patient():
             }
         )
         repo = get_repository()
+        training_patients = repo.list_patients()
+        ml_prediction = predict_patient_risk(patient_payload, training_patients)
+        patient_payload["ml_criticality_score"] = ml_prediction["criticality_score"]
+        patient_payload["ml_explainability"] = ml_prediction["explainability"]
+        patient_payload["risk_score"] = ml_prediction["criticality_score"]
+        patient_payload["risk_label"] = f"Risk {ml_prediction['criticality_score']}"
         patient = repo.create_patient(patient_payload)
         flash("Patient created and AI analysis completed.", "success")
         return redirect(url_for("web.detail_page", patient_id=patient["id"], new_patient="1") + "#overview")

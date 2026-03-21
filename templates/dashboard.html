@@ -118,6 +118,27 @@
             </div>
 
             <div class="grid gap-8 xl:grid-cols-[1fr_1fr]">
+            <div class="bento-tile rounded-[2rem] p-8 xl:col-span-2">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <p class="text-sm uppercase tracking-[0.3em] text-slate-400">AI Insights</p>
+                        <h4 class="mt-2 text-2xl font-semibold">Machine Learning Analysis Layer</h4>
+                    </div>
+                    <div class="inline-flex rounded-2xl border border-white/10 bg-white/5 p-1 text-sm" role="tablist" aria-label="AI Insights tabs">
+                        <button type="button" id="ai-tab-importance" class="ai-tab-btn rounded-xl px-4 py-2 text-slate-100" data-tab="importance">Feature Importance</button>
+                        <button type="button" id="ai-tab-clustering" class="ai-tab-btn rounded-xl px-4 py-2 text-slate-300" data-tab="clustering">Clustering View</button>
+                    </div>
+                </div>
+                <div id="ai-panel-importance" class="mt-6 rounded-3xl border border-white/10 bg-white/5 p-5" role="tabpanel">
+                    <p class="text-sm font-medium text-white">Top medical factors driving ML risk</p>
+                    <canvas id="featureImportanceChart" class="mt-4 h-[280px]"></canvas>
+                </div>
+                <div id="ai-panel-clustering" class="mt-6 hidden rounded-3xl border border-white/10 bg-white/5 p-5" role="tabpanel">
+                    <p class="text-sm font-medium text-white">Claim Amount vs Age (color-coded by ML predicted risk)</p>
+                    <canvas id="riskClusterChart" class="mt-4 h-[280px]"></canvas>
+                </div>
+            </div>
+
                 <div class="bento-tile rounded-[2rem] p-8 xl:col-span-2">
                     <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
                         <div>
@@ -206,6 +227,7 @@ window.dashboardBoot = {
     highRiskPatients: {{ high_risk_patients|tojson }},
     hospitals: {{ hospitals|tojson }},
     analytics: {{ analytics|tojson }},
+    aiInsights: {{ ai_insights|tojson }},
     stats: {{ stats|tojson }},
     currentUser: {{ current_user|tojson }},
     analyticsEndpoint: "{{ url_for('api.analytics') }}",

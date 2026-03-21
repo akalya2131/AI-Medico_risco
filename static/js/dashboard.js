@@ -11,6 +11,8 @@ const alertBannerCount = document.getElementById('risk-alert-banner-count');
 const alertSummaryValue = document.getElementById('risk-alert-summary-value');
 let diseaseChart;
 let riskChart;
+let featureImportanceChart;
+let riskClusterChart;
 let map;
 let mapMarkers = [];
 
@@ -164,6 +166,109 @@ function renderAnalyticsCharts() {
     });
 }
 
+
+function renderAiInsights() {
+    const importanceCanvas = document.getElementById('featureImportanceChart');
+    const clusterCanvas = document.getElementById('riskClusterChart');
+    const featureImportance = boot.aiInsights?.feature_importance || {};
+    const clusteringPoints = boot.aiInsights?.clustering_points || [];
+
+    if (importanceCanvas) {
+        const sortedEntries = Object.entries(featureImportance).slice(0, 8);
+        const labels = sortedEntries.map(([label]) => label.replace('Disease::', '')); 
+        const values = sortedEntries.map(([, value]) => value);
+
+        if (featureImportanceChart) featureImportanceChart.destroy();
+        featureImportanceChart = new Chart(importanceCanvas, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Feature importance',
+                    data: values,
+                    backgroundColor: '#38bdf8',
+                    borderRadius: 8,
+                }],
+            },
+            options: {
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(148, 163, 184, 0.08)' } },
+                    y: { ticks: { color: '#cbd5e1' }, grid: { display: false } },
+                },
+            },
+        });
+    }
+
+    if (clusterCanvas) {
+        const colorsByRisk = {
+            1: '#22c55e',
+            2: '#38bdf8',
+            3: '#a78bfa',
+            4: '#fb7185',
+            5: '#ef4444',
+        };
+        const points = clusteringPoints.map((item) => ({
+            x: item.age,
+            y: item.claim_amount,
+            risk: item.predicted_risk,
+            patient_name: item.patient_name,
+        }));
+
+        if (riskClusterChart) riskClusterChart.destroy();
+        riskClusterChart = new Chart(clusterCanvas, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Patients',
+                    data: points,
+                    pointRadius: 6,
+                    pointBackgroundColor: points.map((point) => colorsByRisk[point.risk] || '#cbd5e1'),
+                }],
+            },
+            options: {
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => `${ctx.raw.patient_name} | Age ${ctx.raw.x} | Claim ₹${Math.round(ctx.raw.y).toLocaleString()} | Risk ${ctx.raw.risk}`,
+                        },
+                    },
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Age', color: '#cbd5e1' }, ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(148, 163, 184, 0.08)' } },
+                    y: { title: { display: true, text: 'Claim Amount', color: '#cbd5e1' }, ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(148, 163, 184, 0.08)' } },
+                },
+            },
+        });
+    }
+}
+
+function configureAiTabs() {
+    const tabButtons = [...document.querySelectorAll('.ai-tab-btn')];
+    const importancePanel = document.getElementById('ai-panel-importance');
+    const clusteringPanel = document.getElementById('ai-panel-clustering');
+    if (!tabButtons.length || !importancePanel || !clusteringPanel) return;
+
+    const setActive = (tab) => {
+        const isImportance = tab === 'importance';
+        importancePanel.classList.toggle('hidden', !isImportance);
+        clusteringPanel.classList.toggle('hidden', isImportance);
+        tabButtons.forEach((button) => {
+            const active = button.dataset.tab === tab;
+            button.classList.toggle('bg-violet-500/40', active);
+            button.classList.toggle('text-white', active);
+            button.classList.toggle('text-slate-300', !active);
+        });
+    };
+
+    tabButtons.forEach((button) => {
+        button.addEventListener('click', () => setActive(button.dataset.tab));
+    });
+    setActive('importance');
+}
+
 patientDirectory?.addEventListener('click', (event) => {
     const card = event.target.closest('.patient-card-link');
     if (!card || card.classList.contains('hidden')) return;
@@ -185,10 +290,13 @@ window.addEventListener('dashboard:patient-created', (event) => {
     renderHighRiskQueue();
     renderStats();
     renderAnalyticsCharts();
+    renderAiInsights();
     renderMap();
 });
+configureAiTabs();
 renderDirectory();
 renderHighRiskQueue();
 renderStats();
 renderAnalyticsCharts();
+renderAiInsights();
 renderMap();

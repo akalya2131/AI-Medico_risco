@@ -6,6 +6,7 @@ from app.services.ai_patient_analysis import analyze_patient_input, build_patien
 from app.services.patient_insights import build_analytics_summary, build_dashboard_stats, enrich_patients, get_high_risk_patients
 from app.services.supabase_service import HealthcareRepository
 from app.utils.geo import closest_hospital
+from ml_engine import build_ai_insights, predict_patient_risk
 from risk_engine import calculate_risk
 
 api_bp = Blueprint("api", __name__)
@@ -37,6 +38,7 @@ def build_dashboard_payload(repo: HealthcareRepository) -> dict:
         "high_risk_patients": get_high_risk_patients(enriched_patients),
         "stats": build_dashboard_stats(enriched_patients),
         "analytics": build_analytics_summary(enriched_patients),
+        "ai_insights": build_ai_insights(enriched_patients),
     }
 
 
@@ -118,11 +120,19 @@ def create_analyzed_patient():
     patient_payload = build_patient_payload(payload)
 
     repo = get_repository()
+    training_patients = repo.list_patients()
+    ml_prediction = predict_patient_risk(patient_payload, training_patients)
+    patient_payload["ml_criticality_score"] = ml_prediction["criticality_score"]
+    patient_payload["ml_explainability"] = ml_prediction["explainability"]
+    patient_payload["risk_score"] = ml_prediction["criticality_score"]
+    patient_payload["risk_label"] = f"Risk {ml_prediction['criticality_score']}"
+
     created_patient = repo.create_patient(patient_payload)
     enriched_patient = {
         **created_patient,
         "risk": calculate_risk(created_patient),
         "ai_analysis": created_patient.get("ai_analysis") or derive_ai_analysis_from_patient(created_patient),
+        "ml_prediction": ml_prediction,
     }
     dashboard_payload = build_dashboard_payload(repo)
     return jsonify({"success": True, "patient": enriched_patient, "dashboard": dashboard_payload}), 201
