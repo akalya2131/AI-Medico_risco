@@ -133,7 +133,7 @@
                         <div class="flex flex-wrap gap-3">
                             <a href="{{ document.url }}" target="_blank" rel="noreferrer" class="rounded-2xl border border-teal-300/20 bg-teal-300/10 px-4 py-2 text-sm font-medium text-teal-100">View</a>
                             <form method="post" action="{{ url_for('web.delete_document', patient_id=patient.id, storage_key=document.storage_key) }}">
-                                <button type="submit" class="rounded-2xl border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm font-medium text-rose-100">🗑 Delete</button>
+                                <button type="submit" class="rounded-2xl border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm font-medium text-rose-100">Delete</button>
                             </form>
                         </div>
                     </div>
