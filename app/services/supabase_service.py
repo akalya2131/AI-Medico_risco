@@ -33,21 +33,29 @@ class HealthcareRepository:
     def is_configured(self) -> bool:
         return self._supabase is not None
 
-    def authenticate_user(self, email: str, password: str) -> dict[str, str]:
+    def authenticate_user(self, email: str, password: str, full_name: str = "", role: str = "doctor") -> dict[str, str]:
         if self._supabase:
             try:
                 self._supabase.auth.sign_in_with_password({"email": email, "password": password})
             except Exception:
                 pass
-        return {"email": email, "full_name": email.split("@")[0].replace(".", " ").title()}
+        return {
+            "email": email,
+            "full_name": full_name or email.split("@")[0].replace(".", " ").title(),
+            "role": role if role in {"doctor", "admin"} else "doctor",
+        }
 
-    def register_user(self, full_name: str, email: str, password: str) -> dict[str, str]:
+    def register_user(self, full_name: str, email: str, password: str, role: str = "doctor") -> dict[str, str]:
         if self._supabase:
             try:
                 self._supabase.auth.sign_up({"email": email, "password": password})
             except Exception:
                 pass
-        return {"email": email, "full_name": full_name or email.split("@")[0].replace(".", " ").title()}
+        return {
+            "email": email,
+            "full_name": full_name or email.split("@")[0].replace(".", " ").title(),
+            "role": role if role in {"doctor", "admin"} else "doctor",
+        }
 
     def list_patients(self) -> list[dict[str, Any]]:
         if not self._supabase:

@@ -1,0 +1,149 @@
+<form
+    class="ai-patient-form grid gap-6 lg:grid-cols-[1.1fr_0.9fr]"
+    method="post"
+    action="{{ submit_action }}"
+    data-submit-mode="{{ submit_mode|default('page') }}"
+    data-preview-endpoint="{{ url_for('api.ai_analysis_preview') }}"
+    data-submit-endpoint="{{ url_for('api.create_analyzed_patient') }}"
+>
+    <div class="space-y-6">
+        <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block">
+                <span class="mb-2 flex items-center gap-2 text-sm text-slate-300">👤 Patient Name</span>
+                <div class="rounded-3xl border border-white/10 bg-white/5 px-4 py-3 shadow-lg shadow-slate-950/20">
+                    <input class="w-full bg-transparent text-white outline-none placeholder:text-slate-500" type="text" name="patient_name" placeholder="Full patient name" required>
+                </div>
+            </label>
+            <label class="block">
+                <span class="mb-2 flex items-center gap-2 text-sm text-slate-300">📍 City</span>
+                <div class="rounded-3xl border border-white/10 bg-white/5 px-4 py-3 shadow-lg shadow-slate-950/20">
+                    <input class="w-full bg-transparent text-white outline-none placeholder:text-slate-500" type="text" name="city" placeholder="Care city" value="New Delhi">
+                </div>
+            </label>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-3">
+            <label class="block">
+                <span class="mb-2 flex items-center gap-2 text-sm text-slate-300">🎂 Age</span>
+                <div class="rounded-3xl border border-white/10 bg-white/5 px-4 py-3">
+                    <input class="w-full bg-transparent text-white outline-none" type="number" name="age" min="0" value="35" required>
+                </div>
+            </label>
+            <label class="block">
+                <span class="mb-2 flex items-center gap-2 text-sm text-slate-300">⚧️ Gender</span>
+                <div class="rounded-3xl border border-white/10 bg-white/5 px-4 py-3">
+                    <select class="w-full bg-transparent text-white outline-none" name="gender" required>
+                        <option class="text-slate-900">Male</option>
+                        <option class="text-slate-900">Female</option>
+                        <option class="text-slate-900">Other</option>
+                    </select>
+                </div>
+            </label>
+            <label class="block">
+                <span class="mb-2 flex items-center gap-2 text-sm text-slate-300">🧬 Disease</span>
+                <div class="rounded-3xl border border-white/10 bg-white/5 px-4 py-3">
+                    <select class="w-full bg-transparent text-white outline-none" name="disease" required>
+                        <option class="text-slate-900">Diabetes</option>
+                        <option class="text-slate-900">Heart Disease</option>
+                        <option class="text-slate-900">COPD</option>
+                        <option class="text-slate-900">Hypertension</option>
+                        <option class="text-slate-900">Cancer</option>
+                        <option class="text-slate-900">Asthma</option>
+                        <option class="text-slate-900">Kidney Disease</option>
+                    </select>
+                </div>
+            </label>
+        </div>
+
+        <div class="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <p class="text-sm font-medium text-white">⚖️ BMI with What-If Simulation</p>
+                    <p class="mt-1 text-sm text-slate-400">Drag the slider or type a value to see live risk changes.</p>
+                </div>
+                <span class="ai-bmi-value rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-medium text-cyan-100">24.0</span>
+            </div>
+            <div class="mt-5 grid gap-4 md:grid-cols-[1fr_120px]">
+                <input class="ai-bmi-range w-full accent-cyan-300" type="range" min="10" max="45" step="0.1" value="24" aria-label="BMI slider">
+                <input class="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-white outline-none" type="number" step="0.1" min="10" max="45" name="bmi" value="24" required>
+            </div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-3">
+            <div class="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-sm font-medium text-white">🚬 Smoking Status</p>
+                        <p class="mt-1 text-sm text-slate-400">Toggle to preview respiratory risk.</p>
+                    </div>
+                    <button type="button" class="ai-smoking-toggle relative h-8 w-16 rounded-full bg-slate-700 transition" aria-label="Toggle smoking status">
+                        <span class="absolute left-1 top-1 h-6 w-6 rounded-full bg-white transition"></span>
+                    </button>
+                </div>
+                <input type="hidden" name="smoking_status" value="No">
+                <p class="ai-smoking-label mt-4 text-sm text-slate-400">Non-smoking profile selected.</p>
+            </div>
+
+            <label class="block">
+                <span class="mb-2 flex items-center gap-2 text-sm text-slate-300">💰 Claim Amount</span>
+                <div class="rounded-3xl border border-white/10 bg-white/5 px-4 py-3">
+                    <input class="w-full bg-transparent text-white outline-none" type="number" min="0" step="0.01" name="claim_amount" value="0" required>
+                </div>
+            </label>
+
+            <label class="block">
+                <span class="mb-2 flex items-center gap-2 text-sm text-slate-300">📊 Claim Frequency</span>
+                <div class="rounded-3xl border border-white/10 bg-white/5 px-4 py-3">
+                    <input class="w-full bg-transparent text-white outline-none" type="number" min="0" max="12" name="claim_frequency" value="0" required>
+                </div>
+            </label>
+        </div>
+
+        <div class="ai-validation-hints hidden rounded-[1.75rem] border border-amber-300/20 bg-amber-400/10 p-5">
+            <p class="text-sm font-medium text-amber-100">✨ Smart Validation Hints</p>
+            <ul class="ai-validation-list mt-3 space-y-2 text-sm text-amber-50/90"></ul>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+            <button class="rounded-2xl bg-gradient-to-r from-sky-500 via-indigo-500 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-950/35 transition hover:scale-[1.01]" type="submit">
+                Analyze Patient
+            </button>
+            {% if submit_mode == 'dashboard' %}
+            <button class="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm text-slate-300" type="button" data-close-add-patient-modal>
+                Cancel
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <aside class="rounded-[2rem] border border-white/10 bg-white/6 p-6 shadow-2xl shadow-indigo-950/25">
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <p class="text-sm uppercase tracking-[0.25em] text-cyan-200/70">Real-Time Intelligence</p>
+                <h3 class="mt-2 text-2xl font-semibold text-white">Live AI Preview</h3>
+            </div>
+            <div class="ai-risk-badge rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 px-4 py-2 text-sm font-semibold text-white">Low</div>
+        </div>
+
+        <div class="mt-6 rounded-[1.75rem] border border-white/10 bg-slate-950/30 p-5 text-center">
+            <p class="text-xs uppercase tracking-[0.25em] text-slate-500">Risk Score</p>
+            <p class="ai-risk-score mt-3 text-5xl font-bold text-white">18</p>
+            <p class="ai-risk-level mt-2 text-sm text-slate-400">Low risk profile</p>
+        </div>
+
+        <div class="mt-6">
+            <p class="text-sm font-medium text-white">Feature Contributions</p>
+            <div class="ai-contribution-list mt-4 space-y-3"></div>
+        </div>
+
+        <div class="mt-6">
+            <p class="text-sm font-medium text-white">Explainable Insights</p>
+            <ul class="ai-insights-list mt-3 space-y-2 text-sm text-slate-300"></ul>
+        </div>
+
+        <div class="mt-6">
+            <p class="text-sm font-medium text-white">Recommendations</p>
+            <ul class="ai-recommendations-list mt-3 space-y-2 text-sm text-slate-300"></ul>
+        </div>
+    </aside>
+</form>

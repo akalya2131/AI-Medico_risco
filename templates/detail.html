@@ -2,6 +2,13 @@
 {% block title %}{{ patient.full_name }} | Comprehensive EHR Detail{% endblock %}
 {% block content %}
 <section class="space-y-8">
+    {% if new_patient_created %}
+    <div class="rounded-[2rem] border border-emerald-300/20 bg-emerald-400/10 px-6 py-5 text-emerald-100">
+        <p class="text-sm uppercase tracking-[0.35em] text-emerald-200/70">Patient Added Successfully</p>
+        <h2 class="mt-2 text-2xl font-semibold text-white">AI analysis was completed during intake and saved with this patient record.</h2>
+    </div>
+    {% endif %}
+
     <div class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div class="bento-tile rounded-[2rem] p-8" id="detail-shell">
             <div class="flex flex-wrap items-center justify-between gap-4">
@@ -11,7 +18,12 @@
                     <h2 class="mt-3 text-4xl font-semibold">{{ patient.full_name }}</h2>
                     <p class="mt-3 text-sm text-slate-400">{{ patient.gender }} · {{ patient.city }} · Member {{ patient.member_id }}</p>
                 </div>
+                {% if patient.is_high_risk %}
+                <div class="rounded-2xl border border-rose-300/25 bg-rose-300/10 px-4 py-3 text-sm font-medium text-rose-100">⚠️ High Risk patient — urgent follow-up recommended</div>
+                {% endif %}
+                {% if current_user.role == 'admin' %}
                 <a href="{{ url_for('web.add_patient') }}" class="rounded-2xl bg-gradient-to-r from-violet-700 to-teal-400 px-5 py-3 text-sm font-medium text-slate-950">+ Add Another Patient</a>
+                {% endif %}
             </div>
             <div class="mt-6 grid gap-4 sm:grid-cols-4">
                 <div class="rounded-3xl border border-white/10 bg-white/5 p-5"><p class="text-xs uppercase tracking-[0.25em] text-slate-500">Age</p><p class="mt-2 text-3xl font-semibold text-white">{{ patient.age }}</p></div>
@@ -57,6 +69,36 @@
                     </div>
                 </div>
             </div>
+            <div class="mt-8 grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+                <div class="rounded-[1.75rem] border border-white/10 bg-white/5 p-6 text-center">
+                    <p class="text-xs uppercase tracking-[0.25em] text-slate-500">AI Intake Score</p>
+                    <p class="mt-4 text-5xl font-bold text-white">{{ patient.ai_analysis.risk_score }}</p>
+                    <span class="mt-4 inline-flex rounded-full bg-gradient-to-r {{ 'from-rose-500 to-red-600' if patient.ai_analysis.risk_level == 'High' else 'from-amber-400 to-orange-500' if patient.ai_analysis.risk_level == 'Medium' else 'from-emerald-400 to-teal-500' }} px-4 py-2 text-sm font-semibold text-white">{{ patient.ai_analysis.risk_level }}</span>
+                    <p class="mt-3 text-sm text-slate-400">0–100 AI-style risk score captured at intake.</p>
+                </div>
+                <div class="rounded-[1.75rem] border border-white/10 bg-white/5 p-6">
+                    <p class="text-sm font-medium text-white">Feature contribution breakdown</p>
+                    <div class="mt-4 space-y-4">
+                        {% for contribution in patient.ai_analysis.contributions %}
+                        <div>
+                            <div class="mb-2 flex items-center justify-between text-xs text-slate-400">
+                                <span>{{ contribution.feature }}</span>
+                                <span>{{ contribution.value }}</span>
+                            </div>
+                            <div class="h-2 overflow-hidden rounded-full bg-slate-800">
+                                <div class="h-full rounded-full bg-gradient-to-r from-cyan-400 to-violet-500" style="width: {{ contribution.value }}%"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <p class="mt-6 text-sm font-medium text-white">Explainable AI insights</p>
+                    <ul class="mt-3 space-y-2 text-sm text-slate-300">
+                        {% for insight in patient.ai_analysis.insights %}
+                        <li>• {{ insight }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
         </section>
 
         <section data-panel="history" class="detail-panel hidden bento-tile rounded-[2rem] p-8">
@@ -66,10 +108,13 @@
                     <h3 class="mt-3 text-2xl font-semibold">Medical history timeline</h3>
                 </div>
                 <form method="post" action="{{ url_for('web.add_history_record', patient_id=patient.id) }}" class="grid gap-3 rounded-3xl border border-white/10 bg-white/5 p-4 sm:grid-cols-3 xl:w-[620px]">
+                    {% if current_user.role != 'admin' %}
+                    <div class="sm:col-span-3 rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">Doctor role has view-only access for history updates.</div>
+                    {% endif %}
                     <input class="input-shell" type="text" name="title" placeholder="Treatment / Visit" required>
                     <input class="input-shell" type="date" name="date" required>
                     <input class="input-shell sm:col-span-3" type="text" name="detail" placeholder="Hospital, treatment notes, and summary" required>
-                    <button class="sm:col-span-3 rounded-2xl border border-violet-300/20 bg-violet-300/10 px-4 py-3 text-sm font-medium text-violet-100" type="submit">+ Add Record</button>
+                    <button class="sm:col-span-3 rounded-2xl border border-violet-300/20 bg-violet-300/10 px-4 py-3 text-sm font-medium text-violet-100 disabled:cursor-not-allowed disabled:opacity-50" type="submit" {% if current_user.role != 'admin' %}disabled{% endif %}>+ Add Record</button>
                 </form>
             </div>
             <div class="mt-6 space-y-4 border-l border-violet-300/20 pl-6">
@@ -93,13 +138,16 @@
                     <h3 class="mt-3 text-2xl font-semibold">Insurance claim ledger</h3>
                 </div>
                 <form method="post" action="{{ url_for('web.add_claim_record', patient_id=patient.id) }}" class="grid gap-3 rounded-3xl border border-white/10 bg-white/5 p-4 sm:grid-cols-2 xl:w-[700px]">
+                    {% if current_user.role != 'admin' %}
+                    <div class="sm:col-span-2 rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">Doctor role can review claims but cannot create or edit them.</div>
+                    {% endif %}
                     <input class="input-shell" type="text" name="provider" placeholder="Provider" required>
                     <input class="input-shell" type="text" name="claim_id" placeholder="Claim ID (optional)">
                     <input class="input-shell" type="number" name="amount_inr" min="0" step="0.01" placeholder="Amount in INR" required>
                     <input class="input-shell" type="text" name="status" placeholder="Status" required>
                     <input class="input-shell" type="date" name="date" required>
                     <input class="input-shell" type="text" name="diagnosis_codes" placeholder="Diagnosis codes, comma separated">
-                    <button class="sm:col-span-2 rounded-2xl border border-violet-300/20 bg-violet-300/10 px-4 py-3 text-sm font-medium text-violet-100" type="submit">+ Add Record</button>
+                    <button class="sm:col-span-2 rounded-2xl border border-violet-300/20 bg-violet-300/10 px-4 py-3 text-sm font-medium text-violet-100 disabled:cursor-not-allowed disabled:opacity-50" type="submit" {% if current_user.role != 'admin' %}disabled{% endif %}>+ Add Record</button>
                 </form>
             </div>
             <div class="mt-6 overflow-hidden rounded-[1.5rem] border border-white/10">
@@ -135,8 +183,11 @@
                     <h3 class="mt-3 text-2xl font-semibold">Medical reports for {{ patient.full_name }}</h3>
                 </div>
                 <form method="post" action="{{ url_for('web.upload_document', patient_id=patient.id) }}" enctype="multipart/form-data" class="grid gap-3 rounded-3xl border border-white/10 bg-white/5 p-4 sm:grid-cols-[1fr_auto]">
+                    {% if current_user.role != 'admin' %}
+                    <div class="sm:col-span-2 rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">Doctor role has read-only access to the document vault.</div>
+                    {% endif %}
                     <input class="input-shell file:mr-4 file:rounded-xl file:border-0 file:bg-violet-300/15 file:px-4 file:py-2 file:text-violet-100" type="file" name="document" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx">
-                    <button class="rounded-2xl bg-gradient-to-r from-violet-700 to-teal-400 px-4 py-3 text-sm font-medium text-slate-950" type="submit">Upload Report</button>
+                    <button class="rounded-2xl bg-gradient-to-r from-violet-700 to-teal-400 px-4 py-3 text-sm font-medium text-slate-950 disabled:cursor-not-allowed disabled:opacity-50" type="submit" {% if current_user.role != 'admin' %}disabled{% endif %}>Upload Report</button>
                 </form>
             </div>
             <div class="mt-6 grid gap-4">
@@ -150,7 +201,7 @@
                         <div class="flex flex-wrap gap-3">
                             <a href="{{ document.url }}" target="_blank" rel="noreferrer" class="rounded-2xl border border-teal-300/20 bg-teal-300/10 px-4 py-2 text-sm font-medium text-teal-100">View</a>
                             <form method="post" action="{{ url_for('web.delete_document', patient_id=patient.id, storage_key=document.storage_key) }}">
-                                <button type="submit" class="rounded-2xl border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm font-medium text-rose-100">Delete</button>
+                                <button type="submit" class="rounded-2xl border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm font-medium text-rose-100 disabled:cursor-not-allowed disabled:opacity-50" {% if current_user.role != 'admin' %}disabled{% endif %}>Delete</button>
                             </form>
                         </div>
                     </div>

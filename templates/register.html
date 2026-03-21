@@ -9,6 +9,12 @@
             <div class="sm:col-span-2"><input class="input-shell" type="text" name="full_name" placeholder="Dr. Aditi Rao" required></div>
             <div><input class="input-shell" type="email" name="email" placeholder="aditi@hospital.ai" required></div>
             <div><input class="input-shell" type="password" name="password" placeholder="Minimum 8 characters" required></div>
+            <div class="sm:col-span-2">
+                <select class="input-shell" name="role" required>
+                    <option value="doctor">Doctor</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
             <div class="sm:col-span-2"><button class="w-full rounded-2xl bg-gradient-to-r from-violet-700 to-teal-400 px-4 py-3 font-medium text-slate-950" type="submit">Create Workspace</button></div>
         </form>
     </div>

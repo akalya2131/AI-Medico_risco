@@ -2,14 +2,33 @@
 {% block title %}Command Center | AI Healthcare Intelligence{% endblock %}
 {% block content %}
 <section class="space-y-8">
+    <div id="risk-alert-banner" class="rounded-[2rem] border border-rose-400/25 bg-gradient-to-r from-rose-500/20 to-amber-400/10 px-6 py-5 shadow-[0_20px_40px_rgba(127,29,29,0.22)] {% if not stats.high_risk_alerts %}hidden{% endif %}">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <p class="text-sm uppercase tracking-[0.35em] text-rose-100">⚠️ Risk Alert System</p>
+                <h2 id="risk-alert-banner-count" class="mt-2 text-2xl font-semibold text-white">{{ stats.high_risk_alerts }} High Risk Patients require immediate review.</h2>
+                <p class="mt-2 text-sm text-rose-100/85">Patients with risk score 4 or 5 are highlighted across the dashboard and available through the new `/api/high-risk` endpoint.</p>
+            </div>
+            <div class="rounded-2xl border border-rose-300/25 bg-rose-300/10 px-5 py-4 text-center">
+                <p class="text-xs uppercase tracking-[0.25em] text-rose-100/70">Summary</p>
+                <p id="risk-alert-summary-value" class="mt-2 text-3xl font-semibold text-white">{{ stats.high_risk_alerts }}</p>
+                <p class="text-sm text-rose-100">High Risk Patients</p>
+            </div>
+        </div>
+    </div>
+
     <div class="grid gap-6 xl:grid-cols-12">
         <div class="bento-tile rounded-[2rem] p-8 xl:col-span-8">
             <p class="text-sm uppercase tracking-[0.35em] text-teal-200/70">Production EHR Dashboard</p>
             <h2 class="mt-3 max-w-3xl text-4xl font-semibold leading-tight">Manage patient intake, drill into records, and route high-risk patients toward specialty care.</h2>
-            <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-300">The simulator has been replaced with real workflows: add patients, open deep-dive records, log treatments, log claims, and manage reports inside the EHR flow.</p>
+            <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-300">The simulator has been replaced with real workflows: add patients, open deep-dive records, log treatments, log claims, manage reports, and run a premium AI-style intake analysis without leaving the dashboard.</p>
             <div class="mt-6 flex flex-wrap gap-3">
-                <a href="{{ url_for('web.add_patient') }}" class="rounded-2xl bg-gradient-to-r from-violet-700 to-teal-400 px-5 py-3 text-sm font-medium text-slate-950">+ Add Patient</a>
+                {% if current_user.role == 'admin' %}
+                <button type="button" data-open-add-patient-modal class="rounded-2xl bg-gradient-to-r from-violet-700 to-teal-400 px-5 py-3 text-sm font-medium text-slate-950">+ Add Patient</button>
+                <a href="{{ url_for('web.add_patient') }}" class="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-slate-100">Open Full Intake Page</a>
+                {% endif %}
                 <div class="rounded-2xl border border-teal-300/10 bg-teal-300/5 px-5 py-3 text-sm text-slate-300">Supabase status: {{ 'Connected' if supabase_ready else 'Demo mode active' }}</div>
+                <div class="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm text-slate-300">Role: {{ current_user.role|title }}</div>
             </div>
         </div>
         <div class="bento-tile rounded-[2rem] p-8 xl:col-span-4">
@@ -21,10 +40,38 @@
             <p id="search-status" class="mt-4 text-sm text-slate-400">Type to filter the directory in real time.</p>
         </div>
 
-        <div class="bento-tile rounded-[2rem] p-6 xl:col-span-3"><p class="text-xs uppercase tracking-[0.25em] text-slate-500">Total Patients</p><p class="mt-4 text-4xl font-semibold text-white">{{ stats.total_patients }}</p></div>
-        <div class="bento-tile rounded-[2rem] p-6 xl:col-span-3"><p class="text-xs uppercase tracking-[0.25em] text-slate-500">Average Risk</p><p class="mt-4 text-4xl font-semibold text-violet-100">{{ stats.average_risk }}/5</p></div>
-        <div class="bento-tile rounded-[2rem] p-6 xl:col-span-3"><p class="text-xs uppercase tracking-[0.25em] text-slate-500">Claim Value</p><p class="mt-4 text-4xl font-semibold text-teal-100">₹ {{ '{:,.0f}'.format(stats.total_claims_inr) }}</p></div>
-        <div class="bento-tile rounded-[2rem] p-6 xl:col-span-3"><p class="text-xs uppercase tracking-[0.25em] text-slate-500">High-Risk Alerts</p><p class="mt-4 text-4xl font-semibold text-rose-200">{{ stats.high_risk_alerts }}</p></div>
+        <div class="bento-tile rounded-[2rem] p-6 xl:col-span-3"><p class="text-xs uppercase tracking-[0.25em] text-slate-500">Total Patients</p><p id="stat-total-patients" class="mt-4 text-4xl font-semibold text-white">{{ stats.total_patients }}</p></div>
+        <div class="bento-tile rounded-[2rem] p-6 xl:col-span-3"><p class="text-xs uppercase tracking-[0.25em] text-slate-500">Average Risk</p><p id="stat-average-risk" class="mt-4 text-4xl font-semibold text-violet-100">{{ stats.average_risk }}/5</p></div>
+        <div class="bento-tile rounded-[2rem] p-6 xl:col-span-3"><p class="text-xs uppercase tracking-[0.25em] text-slate-500">Claim Value</p><p id="stat-claim-value" class="mt-4 text-4xl font-semibold text-teal-100">₹ {{ '{:,.0f}'.format(stats.total_claims_inr) }}</p></div>
+        <div class="bento-tile rounded-[2rem] p-6 xl:col-span-3"><p class="text-xs uppercase tracking-[0.25em] text-slate-500">High-Risk Alerts</p><p id="stat-high-risk" class="mt-4 text-4xl font-semibold text-rose-200">{{ stats.high_risk_alerts }}</p></div>
+    </div>
+
+    <div id="high-risk-section" class="bento-tile rounded-[2rem] p-8">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <p class="text-sm uppercase tracking-[0.3em] text-rose-200">High-Risk Patients</p>
+                <h3 class="mt-2 text-3xl font-semibold">Escalation queue</h3>
+                <p class="mt-2 text-sm text-slate-400">Patients with risk score 4 or 5 are surfaced first for intervention and API access.</p>
+            </div>
+            <div id="high-risk-summary" class="rounded-full border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm font-medium text-rose-100">⚠️ {{ high_risk_patients|length }} High Risk Patients</div>
+        </div>
+        <div id="high-risk-grid" class="mt-6 grid gap-4 lg:grid-cols-3">
+            {% for patient in high_risk_patients %}
+            <a href="{{ url_for('web.detail_page', patient_id=patient.id) }}" class="high-risk-glow block rounded-3xl border bg-rose-500/10 p-5 transition hover:bg-rose-500/15">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="font-medium text-white">⚠️ {{ patient.full_name }}</p>
+                        <p class="mt-1 text-sm text-rose-100/80">{{ patient.primary_diagnosis }} · {{ patient.city }}</p>
+                        <p class="mt-3 text-xs uppercase tracking-[0.25em] text-rose-100/60">Closest hospital</p>
+                        <p class="mt-1 text-sm text-slate-300">{{ patient.closest_hospital.name if patient.closest_hospital else 'Monitoring only' }}</p>
+                    </div>
+                    <span class="rounded-full border border-rose-300/25 bg-rose-300/15 px-3 py-1 text-xs uppercase tracking-[0.2em] text-rose-100">High Risk</span>
+                </div>
+            </a>
+            {% else %}
+            <div class="rounded-3xl border border-dashed border-white/10 bg-white/5 p-6 text-sm text-slate-400 lg:col-span-3">No patients are currently in the high-risk queue.</div>
+            {% endfor %}
+        </div>
     </div>
 
     <div class="grid gap-8 2xl:grid-cols-[380px_1fr]">
@@ -39,14 +86,19 @@
                 </div>
                 <div id="patient-directory" class="space-y-3">
                     {% for patient in patients %}
-                    <a href="{{ url_for('web.detail_page', patient_id=patient.id) }}" class="patient-card patient-card-link block w-full rounded-3xl border border-white/10 bg-white/5 p-4 text-left transition hover:border-teal-300/30 hover:bg-white/10" data-search-text="{{ (patient.full_name ~ ' ' ~ patient.city ~ ' ' ~ patient.member_id ~ ' ' ~ patient.primary_diagnosis ~ ' ' ~ patient.risk.risk_label)|lower }}">
+                    <a href="{{ url_for('web.detail_page', patient_id=patient.id) }}" class="patient-card patient-card-link block w-full rounded-3xl border p-4 text-left transition hover:border-teal-300/30 hover:bg-white/10 {{ 'high-risk-glow border-rose-400/35 bg-rose-500/10' if patient.is_high_risk else 'border-white/10 bg-white/5' }}" data-search-text="{{ (patient.full_name ~ ' ' ~ patient.city ~ ' ' ~ patient.member_id ~ ' ' ~ patient.primary_diagnosis ~ ' ' ~ patient.risk.risk_label)|lower }}">
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <p class="font-medium text-white">{{ patient.full_name }}</p>
+                                <p class="font-medium text-white">{{ '⚠️ ' if patient.is_high_risk else '' }}{{ patient.full_name }}</p>
                                 <p class="mt-1 text-xs uppercase tracking-[0.25em] text-slate-500">{{ patient.city }} · {{ patient.member_id }}</p>
                                 <p class="mt-2 text-sm text-slate-400">{{ patient.primary_diagnosis }}</p>
                             </div>
-                            <span class="rounded-full border border-teal-300/20 bg-teal-300/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-teal-100">{{ patient.risk.risk_label }}</span>
+                            <div class="flex flex-col items-end gap-2">
+                                <span class="rounded-full border border-teal-300/20 bg-teal-300/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-teal-100">{{ patient.risk.risk_label }}</span>
+                                {% if patient.is_high_risk %}
+                                <span class="rounded-full border border-rose-300/25 bg-rose-300/15 px-3 py-1 text-xs uppercase tracking-[0.2em] text-rose-100">High Risk</span>
+                                {% endif %}
+                            </div>
                         </div>
                     </a>
                     {% endfor %}
@@ -66,6 +118,25 @@
             </div>
 
             <div class="grid gap-8 xl:grid-cols-[1fr_1fr]">
+                <div class="bento-tile rounded-[2rem] p-8 xl:col-span-2">
+                    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <p class="text-sm uppercase tracking-[0.3em] text-slate-400">Disease Heatmap / Analytics Insights</p>
+                            <h4 class="mt-2 text-2xl font-semibold">Trends from diagnosis history and risk scores</h4>
+                        </div>
+                        <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">API: <code class="text-teal-200">/api/analytics</code></div>
+                    </div>
+                    <div class="grid gap-6 xl:grid-cols-2">
+                        <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+                            <p class="text-sm font-medium text-white">Disease Frequency</p>
+                            <canvas id="diseaseFrequencyChart" class="mt-4 h-[260px]"></canvas>
+                        </div>
+                        <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+                            <p class="text-sm font-medium text-white">Risk Distribution</p>
+                            <canvas id="riskDistributionChart" class="mt-4 h-[260px]"></canvas>
+                        </div>
+                    </div>
+                </div>
                 <div class="bento-tile rounded-[2rem] p-8">
                     <p class="text-sm uppercase tracking-[0.3em] text-slate-400">Specialty Care Map</p>
                     <h4 class="mt-2 text-2xl font-semibold">India hospital intelligence</h4>
@@ -75,13 +146,13 @@
                     <p class="text-sm uppercase tracking-[0.3em] text-slate-400">Priority Snapshot</p>
                     <div class="mt-6 space-y-4">
                         {% for patient in patients if patient.risk.risk_score >= 4 %}
-                        <a href="{{ url_for('web.detail_page', patient_id=patient.id) }}" class="block rounded-3xl border border-white/10 bg-white/5 p-5 transition hover:bg-white/10">
+                        <a href="{{ url_for('web.detail_page', patient_id=patient.id) }}" class="high-risk-glow block rounded-3xl border bg-rose-500/10 p-5 transition hover:bg-rose-500/15">
                             <div class="flex items-center justify-between gap-4">
                                 <div>
-                                    <p class="font-medium text-white">{{ patient.full_name }}</p>
+                                    <p class="font-medium text-white">⚠️ {{ patient.full_name }}</p>
                                     <p class="mt-1 text-sm text-slate-400">{{ patient.primary_diagnosis }} · {{ patient.city }}</p>
                                 </div>
-                                <span class="rounded-full border border-rose-300/20 bg-rose-300/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-rose-100">{{ patient.risk.risk_score }}/5</span>
+                                <span class="rounded-full border border-rose-300/20 bg-rose-300/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-rose-100">High Risk · {{ patient.risk.risk_score }}/5</span>
                             </div>
                         </a>
                         {% else %}
@@ -94,11 +165,56 @@
     </div>
 </section>
 
+{% if current_user.role == 'admin' %}
+<div id="add-patient-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/75 p-4 backdrop-blur-lg">
+    <div class="relative max-h-[92vh] w-full max-w-7xl overflow-auto rounded-[2rem] border border-white/10 bg-[linear-gradient(160deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9))] p-6 shadow-[0_35px_120px_rgba(15,23,42,0.7)]">
+        <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+            <div>
+                <p class="text-sm uppercase tracking-[0.35em] text-cyan-200/70">Dashboard Modal Intake</p>
+                <h2 class="mt-2 text-3xl font-semibold text-white">Add Patient Details and AI Analysis</h2>
+                <p class="mt-2 max-w-3xl text-sm text-slate-300">Save a patient, generate explainable AI insights, update the dashboard instantly, and open the patient detail view whenever you’re ready.</p>
+            </div>
+            <button type="button" data-close-add-patient-modal class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">Close</button>
+        </div>
+        {% set submit_action = url_for('web.add_patient') %}
+        {% set submit_mode = 'dashboard' %}
+        {% include '_patient_intake_form.html' %}
+    </div>
+</div>
+
+<div id="patient-analysis-result-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/70 p-4 backdrop-blur-lg">
+    <div class="w-full max-w-2xl rounded-[2rem] border border-white/10 bg-[linear-gradient(160deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9))] p-8 shadow-[0_35px_120px_rgba(15,23,42,0.7)]">
+        <p class="text-sm uppercase tracking-[0.35em] text-cyan-200/70">Patient Created Successfully</p>
+        <h3 class="mt-3 text-3xl font-semibold text-white">AI analysis completed</h3>
+        <div class="mt-6 rounded-[1.75rem] border border-white/10 bg-white/5 p-6 text-center">
+            <p class="text-xs uppercase tracking-[0.25em] text-slate-500">Risk Score</p>
+            <p id="created-patient-risk-score" class="mt-3 text-5xl font-bold text-white">0</p>
+            <p id="created-patient-risk-level" class="mt-2 text-sm text-slate-400">Low</p>
+        </div>
+        <ul id="created-patient-insights" class="mt-6 space-y-2 text-sm text-slate-300"></ul>
+        <div class="mt-8 flex flex-wrap gap-3">
+            <a id="created-patient-view-link" href="#" class="rounded-2xl bg-gradient-to-r from-sky-500 via-indigo-500 to-violet-600 px-5 py-3 text-sm font-semibold text-white">Open Patient Detail</a>
+            <button type="button" data-close-created-patient-modal class="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm text-slate-300">Stay on Dashboard</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <script>
 window.dashboardBoot = {
     patients: {{ patients|tojson }},
-    hospitals: {{ hospitals|tojson }}
+    highRiskPatients: {{ high_risk_patients|tojson }},
+    hospitals: {{ hospitals|tojson }},
+    analytics: {{ analytics|tojson }},
+    stats: {{ stats|tojson }},
+    currentUser: {{ current_user|tojson }},
+    analyticsEndpoint: "{{ url_for('api.analytics') }}",
+    highRiskEndpoint: "{{ url_for('api.high_risk_patients') }}",
+    createPatientEndpoint: "{{ url_for('api.create_analyzed_patient') }}"
 };
 </script>
 <script type="module" src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% if current_user.role == 'admin' %}
+<script type="module" src="{{ url_for('static', filename='js/patient_intake.js') }}"></script>
+{% endif %}
 {% endblock %}

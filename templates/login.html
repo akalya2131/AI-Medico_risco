@@ -19,6 +19,10 @@
                 <input class="input-shell" type="text" name="full_name" placeholder="Dr. Aditi Rao">
                 <input class="input-shell" type="email" name="email" placeholder="doctor@hospital.ai" required>
                 <input class="input-shell" type="password" name="password" placeholder="••••••••" required>
+                <select class="input-shell" name="role" required>
+                    <option value="doctor">Doctor</option>
+                    <option value="admin">Admin</option>
+                </select>
                 <button class="w-full rounded-2xl bg-gradient-to-r from-violet-700 to-teal-400 px-4 py-3 font-medium text-slate-950" type="submit">Enter Command Center</button>
             </form>
             <p class="mt-6 text-sm text-slate-400">New workspace? <a class="text-teal-200" href="{{ url_for('web.register') }}">Create an account.</a></p>
